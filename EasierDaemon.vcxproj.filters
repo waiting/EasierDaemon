@@ -13,10 +13,52 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="源文件\winux">
+      <UniqueIdentifier>{92a16c91-e3be-415e-8204-f2e440124162}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\FCGI-Projects\components\winux\src\archives.cpp">
+      <Filter>源文件\winux</Filter>
+    </ClCompile>
+    <ClCompile Include="..\FCGI-Projects\components\winux\src\console.cpp">
+      <Filter>源文件\winux</Filter>
+    </ClCompile>
+    <ClCompile Include="..\FCGI-Projects\components\winux\src\encoding.cpp">
+      <Filter>源文件\winux</Filter>
+    </ClCompile>
+    <ClCompile Include="..\FCGI-Projects\components\winux\src\filesys.cpp">
+      <Filter>源文件\winux</Filter>
+    </ClCompile>
+    <ClCompile Include="..\FCGI-Projects\components\winux\src\json.cpp">
+      <Filter>源文件\winux</Filter>
+    </ClCompile>
+    <ClCompile Include="..\FCGI-Projects\components\winux\src\md5.cpp">
+      <Filter>源文件\winux</Filter>
+    </ClCompile>
+    <ClCompile Include="..\FCGI-Projects\components\winux\src\smartptr.cpp">
+      <Filter>源文件\winux</Filter>
+    </ClCompile>
+    <ClCompile Include="..\FCGI-Projects\components\winux\src\strings.cpp">
+      <Filter>源文件\winux</Filter>
+    </ClCompile>
+    <ClCompile Include="..\FCGI-Projects\components\winux\src\system.cpp">
+      <Filter>源文件\winux</Filter>
+    </ClCompile>
+    <ClCompile Include="..\FCGI-Projects\components\winux\src\time.cpp">
+      <Filter>源文件\winux</Filter>
+    </ClCompile>
+    <ClCompile Include="..\FCGI-Projects\components\winux\src\unzip.cpp">
+      <Filter>源文件\winux</Filter>
+    </ClCompile>
+    <ClCompile Include="..\FCGI-Projects\components\winux\src\utilities.cpp">
+      <Filter>源文件\winux</Filter>
+    </ClCompile>
+    <ClCompile Include="..\FCGI-Projects\components\winux\src\zip.cpp">
+      <Filter>源文件\winux</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
