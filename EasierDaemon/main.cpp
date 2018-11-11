@@ -20,15 +20,15 @@ inline static bool HasSpace( string const & str )
 // Windows错误代码转错误串
 string ObtainErrorStr(DWORD err)
 {
-    char * buf = NULL;
+    char * buf = nullptr;
     DWORD dw = FormatMessageA(
         FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_ALLOCATE_BUFFER,
-        NULL,
+        nullptr,
         err,
         0,
         (LPSTR)&buf,
         256,
-        NULL
+        nullptr
     );
     string sbuf = buf;
     LocalFree(buf);
@@ -149,22 +149,22 @@ int DaemonMain(CommandLineVars const & cmdVars, bool * running, bool isServiceRu
         }
     }
 
-    DWORD dwRet;
+    DWORD ret;
     while ( hProcesses.size() > 0 && *running )
     {
-        dwRet = WaitForMultipleObjects(hProcesses.size(), hProcesses.data(), FALSE, 100);
+        ret = WaitForMultipleObjects(hProcesses.size(), hProcesses.data(), FALSE, 100);
 
-        if ( dwRet == WAIT_FAILED )
+        if ( ret == WAIT_FAILED )
         {
             break;
         }
-        else if ( dwRet == WAIT_TIMEOUT )
+        else if ( ret == WAIT_TIMEOUT )
         {
             waitTimeout();
         }
         else
         {
-            size_t iPos = dwRet - WAIT_OBJECT_0;
+            size_t iPos = ret - WAIT_OBJECT_0;
             // 重启(dwRet - WAIT_OBJECT_0)的进程
             if ( StartupProcessToVector(cmd, processes, hProcesses, iPos) )
             {
@@ -186,11 +186,11 @@ int DaemonMain(CommandLineVars const & cmdVars, bool * running, bool isServiceRu
     for ( auto h : hProcesses )
     {
         BOOL b = TerminateProcess(h, 0);
-        DWORD dwErr = GetLastError();
+        DWORD err = GetLastError();
         if ( isServiceRunning )
-            OutputDebugStringA(ObtainErrorStr(dwErr).c_str());
+            OutputDebugStringA(ObtainErrorStr(err).c_str());
         else
-            cerr << ConsoleColor(fgYellow, ObtainErrorStr(dwErr));
+            cerr << ConsoleColor(fgYellow, ObtainErrorStr(err));
     }
     WaitForMultipleObjects(hProcesses.size(), hProcesses.data(), TRUE, INFINITE);
 
@@ -323,11 +323,11 @@ public:
             SERVICE_DEMAND_START,
             SERVICE_ERROR_NORMAL,
             servrun.c_str(),
-            NULL,
-            NULL,
-            NULL,
-            NULL,
-            NULL
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr
         ), nullptr, CloseServiceHandle);
 
         if ( !serviceHandle )
