@@ -1,13 +1,19 @@
 # EasierDaemon
-这是一个Windows上简易的守护程序，可以监视给定的程序保持一定的进程实例数，可安装为Windows服务。
+This is a simple daemon on Windows that can monitor a program to maintain a certain number of process instances. It can also be installed as a Windows service.
 
-使用示例：
-我想保持4个ping命令进程不停的ping百度
+Build:
+You need the latest vs2017.
 
-安装服务
+Example:
+I want to keep 4 ping processes pinging Google all the time.
 
-    edaemon.exe install -servname "PingBaidu" -servdesc "不断的ping baidu.com" servrun --pc=4 run cmd.exe /c ping www.baidu.com
+    edaemon.exe --pc=4 run cmd.exe /c ping www.google.com
 
-卸载服务
+Install service:
 
-    edaemon.exe uninstall -servname "PingBaidu"
+    edaemon.exe install -servname "MyPingGoogle" -servdesc "pinging Google all the time" servrun --pc=4 run cmd.exe /c ping www.google.com
+
+Uninstall service:
+
+    edaemon.exe uninstall -servname "MyPingGoogle"
+

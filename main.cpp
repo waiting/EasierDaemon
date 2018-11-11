@@ -194,7 +194,7 @@ int DaemonMain(CommandLineVars const & cmdVars, bool * running, bool isServiceRu
     }
     WaitForMultipleObjects(hProcesses.size(), hProcesses.data(), TRUE, INFINITE);
 
-    return true;
+    return 0;
 }
 
 // 服务相关
