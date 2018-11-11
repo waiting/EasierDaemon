@@ -1,8 +1,6 @@
 .vs/
-Debug/
-MT-Debug/
-Release/
-MT-Release/
+objs/
+bin/
 
 # Prerequisites
 *.d
@@ -12,6 +10,7 @@ MT-Release/
 *.lo
 *.o
 *.obj
+*.pdb
 
 # Precompiled Headers
 *.gch
@@ -30,7 +29,6 @@ MT-Release/
 *.lai
 *.la
 *.a
-*.lib
 
 # Executables
 *.exe
