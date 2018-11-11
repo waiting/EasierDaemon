@@ -5,7 +5,7 @@
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MT-Debug|Win32'">
-    <LocalDebuggerCommandArguments>install -servname "MyPingDaemon" -servdesc "MyPingDaemon" servrun --pc=4 run cmd.exe /c ping www.baidu.com</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>--pc=4 run cmd.exe /c ping www.baidu.com</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MT-Release|Win32'">

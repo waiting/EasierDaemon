@@ -18,7 +18,7 @@ inline static bool HasSpace( string const & str )
 }
 
 // Windows错误代码转错误串
-SimpleHandle<char*> GetErrorStr(DWORD err)
+string ObtainErrorStr(DWORD err)
 {
     char * buf = NULL;
     DWORD dw = FormatMessageA(
@@ -30,13 +30,23 @@ SimpleHandle<char*> GetErrorStr(DWORD err)
         256,
         NULL
     );
-
-    return winux::SimpleHandle<char *>(buf, NULL, LocalFree);
+    string sbuf = buf;
+    LocalFree(buf);
+    return std::move(sbuf);
 }
 
-// 组成命令行字符串
-string AssembleCommandLine( int argc, char const ** argv )
+// 获取在flag之后的命令行字符串
+string GetCmdLineStrBehindFlag( CommandLineVars const & cmdVars, string const & flag )
 {
+    int inx = cmdVars.getFlagIndexInArgv(flag);
+    if ( inx == -1 )
+        return "";
+
+    inx = inx + 1;
+
+    int argc = cmdVars.getArgc() - inx;
+    char const ** argv = cmdVars.getArgv() + inx;
+
     string cmd;
     for ( int i = 0; i < argc; i++ )
     {
@@ -81,14 +91,121 @@ HANDLE StartupProcess(string & cmd, HANDLE * phMainThread = nullptr, HANDLE hStd
     return pi.hProcess;
 }
 
+// 启动进程到vector里
+bool StartupProcessToVector(
+    string & cmd,
+    vector< SimpleHandle<HANDLE> > &processes,
+    vector<HANDLE> &hProcesses,
+    int iTargetPos
+)
+{
+    HANDLE hProcess;
+    if ( hProcess = StartupProcess(cmd) )
+    {
+        if ( iTargetPos == -1 )
+        {
+            processes.emplace_back(hProcess, nullptr, CloseHandle);
+            hProcesses.emplace_back(hProcess);
+        }
+        else
+        {
+            processes[iTargetPos].attachNew(hProcess, nullptr, CloseHandle);
+            hProcesses[iTargetPos] = hProcess;
+        }
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+// 守护进程的业务逻辑
+template < typename _Fx1, typename _Fx2, typename _Fx3, typename _Fx4, typename _Fx5 >
+int DaemonMain(CommandLineVars const & cmdVars, bool * running, bool isServiceRunning, _Fx1 startupSuccess, _Fx2 startupFailed, _Fx3 restartupSuccess, _Fx4 restartupFailed, _Fx5 waitTimeout)
+{
+    size_t pc = cmdVars.getOption("--pc", 1); // 开启的目标进程数
+
+    string cmd = GetCmdLineStrBehindFlag(cmdVars, "run");
+
+    if ( isServiceRunning )
+        OutputDebugStringA(( "Command: " + cmd ).c_str());
+    else
+        cout << "Command: " << ConsoleColor(fgYellow | bgBlue, cmd) << endl;
+
+    vector< SimpleHandle<HANDLE> > processes; // 启动的子进程
+    vector<HANDLE> hProcesses;
+
+    for ( size_t i = 0; i < pc; i++ )
+    {
+        if ( StartupProcessToVector(cmd, processes, hProcesses, -1) )
+        {
+            startupSuccess(i);
+        }
+        else
+        {
+            startupFailed(i, ObtainErrorStr(GetLastError()));
+            return -1;
+        }
+    }
+
+    DWORD dwRet;
+    while ( hProcesses.size() > 0 && *running )
+    {
+        dwRet = WaitForMultipleObjects(hProcesses.size(), hProcesses.data(), FALSE, 100);
+
+        if ( dwRet == WAIT_FAILED )
+        {
+            break;
+        }
+        else if ( dwRet == WAIT_TIMEOUT )
+        {
+            waitTimeout();
+        }
+        else
+        {
+            size_t iPos = dwRet - WAIT_OBJECT_0;
+            // 重启(dwRet - WAIT_OBJECT_0)的进程
+            if ( StartupProcessToVector(cmd, processes, hProcesses, iPos) )
+            {
+                restartupSuccess(iPos);
+            }
+            else
+            {
+                restartupFailed(iPos, ObtainErrorStr(GetLastError()));
+            }
+        }
+    } // while
+
+    if ( isServiceRunning )
+        OutputDebugStringA("Exit wait loop");
+    else
+        cout << "Exit wait loop\n";
+
+    // 强制监控的进程退出
+    for ( auto h : hProcesses )
+    {
+        BOOL b = TerminateProcess(h, 0);
+        DWORD dwErr = GetLastError();
+        if ( isServiceRunning )
+            OutputDebugStringA(ObtainErrorStr(dwErr).c_str());
+        else
+            cerr << ConsoleColor(fgYellow, ObtainErrorStr(dwErr));
+    }
+    WaitForMultipleObjects(hProcesses.size(), hProcesses.data(), TRUE, INFINITE);
+
+    return true;
+}
+
+// 服务相关
 struct Service
 {
 public:
     SERVICE_STATUS_HANDLE _hServiceStatus;  // 服务状态句柄
     SERVICE_STATUS _servStatus;             // 服务状态结构
-    string _servname;                       // 服务名
     bool _running;                          // 服务运行与否
 
+    string _servname;                       // 服务名
     CommandLineVars * _pCmdVars;
 public:
     Service()
@@ -303,112 +420,36 @@ private:
 
         g_service.status(SERVICE_START_PENDING, NO_ERROR, 0, 1, 5000);
 
-        g_service.status(SERVICE_START_PENDING, NO_ERROR, 0, 2, 1000);
+        //g_service.status(SERVICE_START_PENDING, NO_ERROR, 0, 2, 1000);
 
-        g_service.status(SERVICE_START_PENDING, NO_ERROR, 0, 3, 5000);
+        //g_service.status(SERVICE_START_PENDING, NO_ERROR, 0, 3, 5000);
 
         g_service.status(SERVICE_RUNNING, NO_ERROR, 0, 0, 0);
 
         g_service._running = true;
-        size_t pc = cmdVars.getOption("--pc", 1); // 开启的目标进程数
 
-        int startIndex = cmdVars.getFlagIndexInArgv("run") + 1;
-        string cmd = AssembleCommandLine(cmdVars.getArgc() - startIndex, cmdVars.getArgv() + startIndex);
-
-        //cout << "Command: " << ConsoleColor(fgYellow | bgBlue, cmd) << endl;
-        OutputDebugStringA(Format("Command:%s,argc=%d,run start=%d", cmd.c_str(), cmdVars.getArgc(), startIndex).c_str());
-
-        vector< SimpleHandle<HANDLE> > processes; // 启动的子进程
-        vector<HANDLE> hProcesses;
-
-        for ( size_t i = 0; i < pc; i++ )
-        {
-            HANDLE hProcess;
-            if ( hProcess = StartupProcess(cmd) )
-            {
-                processes.emplace_back(hProcess, nullptr, CloseHandle);
-                hProcesses.emplace_back(hProcess);
-                //cout << Format("Launch child %d process!\n", i);
+        DaemonMain(
+            cmdVars,
+            &g_service._running,
+            true,
+            [] (int i) {
                 OutputDebugStringA(Format("Launch child %d process!", i).c_str());
-            }
-            else
-            {
-                auto pch = GetErrorStr(GetLastError());
-                string errStr = pch.get();
-                //cerr << ConsoleColor(fgRed, "CreateProcess() failed, " + errStr) << endl;
-                OutputDebugStringA(( "CreateProcess() failed, " + errStr ).c_str());
+            },
+            [] (int i, string errStr) {
+                OutputDebugStringA(Format("%d: StartupProcessToVector() failed, %s", i, errStr.c_str()).c_str());
                 g_service.status(SERVICE_STOPPED, NO_ERROR, 1, 0, 0);
-                return;
+            },
+            [] (int iPos) {
+                OutputDebugStringA(Format("Relaunch child %d process!", iPos).c_str());
+            },
+            [] (int iPos, string errStr) {
+                OutputDebugStringA(Format("%d: StartupProcessToVector() failed, %s", iPos, errStr.c_str()).c_str());
+            },
+            [] () {
             }
-        }
+        );
 
-        bool relaunch = true; // 重启子进程
-        g_service._running = true;
-
-        DWORD dwRet;
-        while ( hProcesses.size() > 0 && g_service._running )
-        {
-            dwRet = WaitForMultipleObjects(hProcesses.size(), hProcesses.data(), FALSE, 1000);
-
-            if ( dwRet == WAIT_FAILED )
-            {
-                break;
-            }
-            else if ( dwRet == WAIT_TIMEOUT )
-            {
-                if ( _kbhit() )
-                {
-                    wint_t ch = _getwch();
-                    if ( ch == 27 )
-                    {
-                        g_service._running = false;
-                    }
-                    else
-                    {
-                        cout << ch << endl;
-                    }
-                }
-            }
-            else
-            {
-                size_t iPos = dwRet - WAIT_OBJECT_0;
-                if ( !relaunch )
-                {
-                    // 删除
-                    hProcesses.erase(hProcesses.begin() + iPos);
-                    processes.erase(processes.begin() + iPos);
-                }
-                else
-                {
-                    // 重启(dwRet - WAIT_OBJECT_0)的进程
-                    HANDLE hProcess;
-                    if ( hProcess = StartupProcess(cmd) )
-                    {
-                        processes[iPos].attachNew(hProcess, nullptr, CloseHandle);
-                        hProcesses[iPos] = hProcess;
-                        //cout << Format("Relaunch child %d process!\n", iPos);
-                        OutputDebugStringA(Format("Relaunch child %d process!", iPos).c_str());
-                    }
-                    else
-                    {
-                        auto pch = GetErrorStr(GetLastError());
-                        string errStr = pch.get();
-                        //cerr << iPos << ConsoleColor(fgRed, ": CreateProcess() failed, " + errStr) << endl;
-                        OutputDebugStringA(Format("%d: CreateProcess() failed, %s", iPos, pch.get()).c_str());
-                    }
-                }
-            }
-        } // while
-
-        //cout << "exit while\n";
-        OutputDebugStringA("Exit while");
-        for ( auto h : hProcesses )
-        {
-            BOOL b = TerminateProcess(h, 0);
-            cout << GetErrorStr(GetLastError()).get();
-        }
-        WaitForMultipleObjects(hProcesses.size(), hProcesses.data(), TRUE, INFINITE);
-
+        // 标记服务退出
         g_service.status(SERVICE_STOPPED, NO_ERROR, 0, 0, 0);
 
     }
@@ -420,61 +461,63 @@ int main( int argc, char const ** argv )
     CommandLineVars cmdVars(argc, argv, "-displayname,-servname,-servdesc", "--pc", "install,uninstall,run,servrun");
 
     // edaemon install -servname "MyCmdDaemon" -servdesc "MyCmd Daemon" servrun --pc=1 run cmd.exe /c ping www.baidu.com
-
     // edaemon uninstall -servname "MyCmdDaemon"
+    // edaemon --pc=1 run cmd.exe /c ping www.baidu.com
 
-    // edaemon --pc=1 run mycmd param1 param2 param3 param4
-
+    // 服务安装 ---------------------------------------------------------------------------------
     if ( cmdVars.hasFlag("install") )
     {
-        int inx = cmdVars.getFlagIndexInArgv("servrun");
-        if ( inx == -1 )
+        string rawServrun = GetCmdLineStrBehindFlag(cmdVars, "servrun");
+        if ( rawServrun.empty() )
         {
-            cerr << ConsoleColor(fgRed, "Service install failed, no `servrun`!") << endl;
+            cerr << ConsoleColor(fgRed, "Service install failed, `servrun` is empty!") << endl;
             return 2;
         }
 
-        inx = inx + 1;
+        string exePath = GetExecutablePath();
+        string exeFile;
+        FilePath(exePath, &exeFile);
 
-        string exepath = GetExecutablePath();
-        string exefile;
-        FilePath(exepath, &exefile);
-        string servrun, servname = cmdVars.getParam("-servname", exefile);
+        string servrun;
+        string servname = cmdVars.getParam("-servname", exeFile);
 
-        if ( HasSpace(exepath) )
-            servrun = "\"" + exepath + "\" -servname " + servname + " " + AssembleCommandLine(argc - inx, argv + inx);
+        if ( HasSpace(exePath) )
+            servrun = "\"" + exePath + "\" -servname " + servname + " " + rawServrun;
         else
-            servrun = exepath + " -servname " + servname + " " + AssembleCommandLine(argc - inx, argv + inx);
+            servrun = exePath + " -servname " + servname + " " + rawServrun;
 
         if ( !Service::Install(servname, servrun, cmdVars.getParam("-displayname"), cmdVars.getParam("-servdesc")) )
         {
+            cerr << ConsoleColor(fgRed, "Service install failed!") << endl;
             return 2;
         }
         cout << "Service install success!\n";
     }
+    // 服务卸载 ---------------------------------------------------------------------------------
     else if ( cmdVars.hasFlag("uninstall") )
     {
         string servname = cmdVars.getParam("-servname");
 
         if ( !servname.empty() )
         {
-            if ( Service::Uninstall(servname) )
-            {
-                cout << "Service uninstall success!" << endl;
-                return 0;
-            }
-            else
+            if ( !Service::Uninstall(servname) )
             {
                 cerr << ConsoleColor(fgRed, "Service uninstall failed!") << endl;
                 return 3;
             }
+            else
+            {
+                cout << "Service uninstall success!" << endl;
+                return 0;
+            }
         }
         return 3;
     }
+    // 运行 -----------------------------------------------------------------------------------
     else if ( cmdVars.hasFlag("run") )
     {
         string servname = cmdVars.getParam("-servname");
-
+        // 是否作为服务启动运行
         if ( !servname.empty() )
         {
             g_service.init(&cmdVars, servname);
@@ -484,52 +527,33 @@ int main( int argc, char const ** argv )
                 return 1;
         }
 
-        size_t pc = cmdVars.getOption("--pc", 1); // 开启的目标进程数
-        
-        int startIndex = cmdVars.getFlagIndexInArgv("run") + 1;
-        string cmd = AssembleCommandLine( argc - startIndex, argv + startIndex );
+        // 直接运行
 
-        cout << "Command: " << ConsoleColor(fgYellow | bgBlue, cmd) << endl;
+        bool running = true;
 
-        vector< SimpleHandle<HANDLE> > processes; // 启动的子进程
-        vector<HANDLE> hProcesses;
-
-        for ( size_t i = 0; i < pc; i++ )
-        {
-            HANDLE hProcess;
-            if ( hProcess = StartupProcess(cmd) )
-            {
-                processes.emplace_back( hProcess, nullptr, CloseHandle );
-                hProcesses.emplace_back(hProcess);
+        DaemonMain(
+            cmdVars,
+            &running,
+            false,
+            [] (int i) {
                 cout << Format("Launch child %d process!\n", i);
-            }
-            else
-            {
-                auto pch = GetErrorStr(GetLastError());
-                string errStr = pch.get();
-                cerr << ConsoleColor(fgRed, "CreateProcess() failed, " + errStr ) << endl;
-                return -1;
-            }
-        }
-        bool relaunch = true; // 重启子进程
-        bool stop = false;
-        DWORD dwRet;
-        while ( hProcesses.size() > 0 && !stop )
-        {
-            dwRet = WaitForMultipleObjects(hProcesses.size(), hProcesses.data(), FALSE, 100);
-
-            if ( dwRet == WAIT_FAILED )
-            {
-                break;
-            }
-            else if ( dwRet == WAIT_TIMEOUT )
-            {
+            },
+            [] (int i, string errStr) {
+                cerr << ConsoleColor(fgRed, Format("%d: StartupProcessToVector() failed, %s", i, errStr.c_str())) << endl;
+            },
+            [] (int iPos) {
+                cout << Format("Relaunch child %d process!\n", iPos);
+            },
+            [] (int iPos, string errStr) {
+                cerr << iPos << ConsoleColor(fgRed, Format("%d: StartupProcessToVector() failed, %s", iPos, errStr.c_str())) << endl;
+            },
+            [&running] () {
                 if ( _kbhit() )
                 {
                     wint_t ch = _getwch();
                     if ( ch == 27 )
                     {
-                        stop = true;
+                        running = false;
                     }
                     else
                     {
@@ -537,48 +561,13 @@ int main( int argc, char const ** argv )
                     }
                 }
             }
-            else
-            {
-                size_t iPos = dwRet - WAIT_OBJECT_0;
-                if ( !relaunch )
-                {
-                    // 删除
-                    hProcesses.erase(hProcesses.begin() + iPos);
-                    processes.erase(processes.begin() + iPos);
-                }
-                else
-                {
-                    // 重启(dwRet - WAIT_OBJECT_0)的进程
-                    HANDLE hProcess;
-                    if ( hProcess = StartupProcess(cmd) )
-                    {
-                        processes[iPos].attachNew(hProcess, nullptr, CloseHandle);
-                        hProcesses[iPos] = hProcess;
-                        cout << Format("Relaunch child %d process!\n", iPos);
-                    }
-                    else
-                    {
-                        auto pch = GetErrorStr(GetLastError());
-                        string errStr = pch.get();
-                        cerr << iPos << ConsoleColor(fgRed, ": CreateProcess() failed, " + errStr) << endl;
-                    }
-                }
-            }
-        } // while
-
-        //cout << "exit while\n";
-        for ( auto h : hProcesses )
-        {
-            BOOL b = TerminateProcess(h, 0);
-            cout << GetErrorStr(GetLastError()).get();
-        }
-        WaitForMultipleObjects(hProcesses.size(), hProcesses.data(), TRUE, INFINITE);
+        );
     }
     else
     {
-        cerr << ConsoleColor( fgRed, "Unknown operate!" ) << endl;
+        cerr << ConsoleColor( fgRed, "Unknown cmd operate!" ) << endl;
     }
-
 
     return 0;
 }
+

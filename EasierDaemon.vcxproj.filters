@@ -21,22 +21,7 @@
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\FCGI-Projects\components\winux\src\archives.cpp">
-      <Filter>源文件\winux</Filter>
-    </ClCompile>
     <ClCompile Include="..\FCGI-Projects\components\winux\src\console.cpp">
-      <Filter>源文件\winux</Filter>
-    </ClCompile>
-    <ClCompile Include="..\FCGI-Projects\components\winux\src\encoding.cpp">
-      <Filter>源文件\winux</Filter>
-    </ClCompile>
-    <ClCompile Include="..\FCGI-Projects\components\winux\src\filesys.cpp">
-      <Filter>源文件\winux</Filter>
-    </ClCompile>
-    <ClCompile Include="..\FCGI-Projects\components\winux\src\json.cpp">
-      <Filter>源文件\winux</Filter>
-    </ClCompile>
-    <ClCompile Include="..\FCGI-Projects\components\winux\src\md5.cpp">
       <Filter>源文件\winux</Filter>
     </ClCompile>
     <ClCompile Include="..\FCGI-Projects\components\winux\src\smartptr.cpp">
@@ -48,16 +33,13 @@
     <ClCompile Include="..\FCGI-Projects\components\winux\src\system.cpp">
       <Filter>源文件\winux</Filter>
     </ClCompile>
-    <ClCompile Include="..\FCGI-Projects\components\winux\src\time.cpp">
-      <Filter>源文件\winux</Filter>
-    </ClCompile>
-    <ClCompile Include="..\FCGI-Projects\components\winux\src\unzip.cpp">
-      <Filter>源文件\winux</Filter>
-    </ClCompile>
     <ClCompile Include="..\FCGI-Projects\components\winux\src\utilities.cpp">
       <Filter>源文件\winux</Filter>
     </ClCompile>
-    <ClCompile Include="..\FCGI-Projects\components\winux\src\zip.cpp">
+    <ClCompile Include="..\FCGI-Projects\components\winux\src\json.cpp">
+      <Filter>源文件\winux</Filter>
+    </ClCompile>
+    <ClCompile Include="..\FCGI-Projects\components\winux\src\filesys.cpp">
       <Filter>源文件\winux</Filter>
     </ClCompile>
   </ItemGroup>

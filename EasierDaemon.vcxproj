@@ -279,19 +279,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\FCGI-Projects\components\winux\src\archives.cpp" />
     <ClCompile Include="..\FCGI-Projects\components\winux\src\console.cpp" />
-    <ClCompile Include="..\FCGI-Projects\components\winux\src\encoding.cpp" />
-    <ClCompile Include="..\FCGI-Projects\components\winux\src\filesys.cpp" />
-    <ClCompile Include="..\FCGI-Projects\components\winux\src\json.cpp" />
-    <ClCompile Include="..\FCGI-Projects\components\winux\src\md5.cpp" />
     <ClCompile Include="..\FCGI-Projects\components\winux\src\smartptr.cpp" />
     <ClCompile Include="..\FCGI-Projects\components\winux\src\strings.cpp" />
     <ClCompile Include="..\FCGI-Projects\components\winux\src\system.cpp" />
-    <ClCompile Include="..\FCGI-Projects\components\winux\src\time.cpp" />
-    <ClCompile Include="..\FCGI-Projects\components\winux\src\unzip.cpp" />
     <ClCompile Include="..\FCGI-Projects\components\winux\src\utilities.cpp" />
-    <ClCompile Include="..\FCGI-Projects\components\winux\src\zip.cpp" />
+    <ClCompile Include="..\FCGI-Projects\components\winux\src\json.cpp" />
+    <ClCompile Include="..\FCGI-Projects\components\winux\src\filesys.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
